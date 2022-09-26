@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport"  content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
+    <title>用户信息</title>
+    <link rel="icon" href="./../images/favico.ico">
+    <!--不同屏幕尺寸根字体设置-->
+    <script src="./../js/base.js"></script>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="../../backend/plugins/element-ui/index.css" />
+    <link rel="stylesheet" href="../../backend/styles/common.css" />
+    <link rel="stylesheet" href="../styles/userinfo.css" />
+</head>
+<body>
+<div class="divHead">
+    <div class="divTitle">
+        <i class="el-icon-arrow-left" onclick="goBack()"></i>用户信息
+    </div>
+</div>
+<div class="addBrand-container" id="userInfo">
+    <div class="container">
+
+        <el-form
+                ref="ruleForm"
+                :model="ruleForm"
+                :rules="rules"
+                :inline="false"
+                label-width="180px"
+                class="demo-ruleForm"
+        >
+            <el-form-item label="账号:" prop="id" >
+                <el-input v-model="this.id" placeholder="请输入账号" maxlength="20" :disabled="true"/>
+            </el-form-item>
+            <el-form-item
+                    label="用户头像:"
+                    prop="region"
+                    class="uploadImg"
+            >
+                <el-upload
+                        class="avatar-uploader"
+                        action="/common/upload"
+                        :show-file-list="false"
+                        :on-success="handleAvatarSuccess"
+                        :on-change="onChange"
+                        ref="upload"
+                >
+                    <img
+                            v-if="imageUrl"
+                            :src="imageUrl"
+                            class="avatar"
+                            width="55px"
+                            height="55px"
+                    >
+                    <i
+                            v-else
+                            class="el-icon-plus avatar-uploader-icon"
+                    ></i>
+                </el-upload>
+            </el-form-item>
+            <el-form-item
+                    label="用户姓名:"
+                    prop="name"
+            >
+                <el-input
+                        v-model="ruleForm.name"
+                        placeholder="请输入用户姓名"
+                        maxlength="20"
+                />
+            </el-form-item>
+
+            <el-form-item
+                    label="手机号:"
+                    prop="phone"
+            >
+                <el-input
+                        v-model="ruleForm.phone"
+                        placeholder="请输入手机号"
+                        maxlength="20"
+                />
+            </el-form-item>
+            <el-form-item
+                    label="性别:"
+                    prop="sex"
+            >
+                <el-radio-group v-model="ruleForm.sex">
+                    <el-radio label="男"></el-radio>
+                    <el-radio label="女"></el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item
+                    label="身份证号:"
+                    prop="idNumber"
+            >
+                <el-input
+                        v-model="ruleForm.idNumber"
+                        placeholder="请输入身份证号"
+                        maxlength="20"
+                />
+            </el-form-item>
+            <div class="subBox">
+                <el-form-item >
+                    <el-button  @click="goBack()">
+                        取消
+                    </el-button>
+                    <el-button
+                            type="primary"
+                            @click="submitForm('ruleForm')"
+                    >
+                        保存
+                    </el-button>
+                </el-form-item>
+            </div>
+        </el-form>
+    </div>
+</div>
+<!-- 开发环境版本，包含了有帮助的命令行警告 -->
+<script src="../../backend/plugins/vue/vue.js"></script>
+<!-- 引入组件库 -->
+<script src="../../backend/plugins/element-ui/index.js"></script>
+<!-- 引入vant组件 -->
+<script src="./../js/vant.min.js"></script>
+<!--不同屏幕尺寸根字体设置-->
+<script src="./../js/base.js"></script>
+<!-- 引入axios -->
+<script src="../../backend/plugins/axios/axios.min.js"></script>
+<script src="../../backend/js/request.js"></script>
+<script src="../../backend/api/member.js"></script>
+<script src="../../backend/js/validate.js"></script>
+<script src="../../backend/js/index.js"></script>
+<script>
+    Vue.config.productionTip=false
+    function goBack(){
+        history.go(-1)
+    }
+    new Vue({
+        el: '#userInfo',
+        data() {
+            return {
+                id: '',
+                imageUrl: '',
+                ruleForm : {
+                    'name': '',
+                    'phone': '',
+                    'sex': '男',
+                    'idNumber': '',
+                    'image': '',
+                    'username': ''
+                }
+            }
+        },
+        computed: {
+            rules () {
+                return {
+                    //账号
+                    id: [{required: true, trigger: 'blur'}],
+                    sex: [{required: true, trigger: 'blur'}],
+                    //姓名
+                    name: [{ required: true, 'validator': checkName, 'trigger': 'blur' }],
+                    'phone': [{ 'required': true, 'validator': checkPhone, 'trigger': 'blur' }],
+                    'idNumber': [{ 'required': true, 'validator': validID, 'trigger': 'blur' }]
+                }
+            }
+        },
+        created() {
+            this.ruleForm.phone =sessionStorage.getItem("userPhone")
+            this.id = sessionStorage.getItem("user");
+            if (this.id) {
+                this.init()
+            }
+        },
+        methods: {
+            handleAvatarSuccess (response, file, fileList) {
+                // 拼接down接口预览
+                if(response.code === 0 && response.msg === '未登录'){
+                    window.top.location.href = '/backend/page/login/login.html'
+                }else{
+                    this.imageUrl = `/common/download?name=${response.data}`
+                    this.ruleForm.image = response.data
+                }
+            },
+
+            onChange (file) {
+                if(file){
+                    const suffix = file.name.split('.')[1]
+                    const size = file.size / 1024 / 1024 < 2
+                    if(['png','jpeg','jpg'].indexOf(suffix) < 0){
+                        this.$message.error('上传图片只支持 png、jpeg、jpg 格式！')
+                        this.$refs.upload.clearFiles()
+                        return false
+                    }
+                    if(!size){
+                        this.$message.error('上传文件大小不能超过 2MB!')
+                        return false
+                    }
+                    return file
+                }
+            },
+
+            async init() {
+                queryUserById(this.id).then(res => {
+                    if (String(res.code) === '1') {
+                        this.ruleForm = res.data
+                        this.ruleForm.sex = res.data.sex === '0' ? '女' : '男'
+                        this.imageUrl = `/common/download?name=${res.data.image}`
+                    } else {
+                        this.$message.error(res.msg || '操作失败')
+                    }
+                })
+            },
+            submitForm (formName) {
+                this.$refs[formName].validate((valid) => {
+                    if (valid) {
+                       const params = {
+                           ...this.ruleForm,
+                           sex: this.ruleForm.sex === '女' ? '0' : '1'
+                       }
+                        editUserInfo(params).then(res => {
+                            if (res.code === 1) {
+                                this.$message.success('用户信息修改成功！')
+                                this.goBack()
+                            }else {
+                                this.$message.error(res.msg || '操作失败')
+                            }
+                        }).catch(err => {
+                            this.$message.error('请求出错了：' + err)
+                        })
+
+                    } else {
+                        console.log('error submit!!')
+                        return false
+                    }
+                })
+            },
+            goBack(){
+                history.go(-1)
+            }
+        }
+    })
+</script>
+</body>
+</html>
+
